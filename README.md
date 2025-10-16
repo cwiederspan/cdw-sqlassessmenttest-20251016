@@ -56,4 +56,8 @@ The deployment creates:
 - Active Azure subscription
 - Logged in to Azure (`az login`)
 
+### Getting Started
+
+**New to this repository?** Start with [GETTING-STARTED.md](GETTING-STARTED.md) for a complete walkthrough from prerequisites to connecting to your VM.
+
 For detailed instructions, see [DEPLOYMENT-GUIDE.md](DEPLOYMENT-GUIDE.md).
