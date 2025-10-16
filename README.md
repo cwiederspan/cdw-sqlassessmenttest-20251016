@@ -36,8 +36,12 @@ The deployment creates:
 
 ### Documentation
 
-- **[DEPLOYMENT-GUIDE.md](DEPLOYMENT-GUIDE.md)**: Comprehensive guide with all Azure CLI commands, alternatives, and troubleshooting
-- **[create-sql-vm.sh](create-sql-vm.sh)**: Automated deployment script
+- **[DEPLOYMENT-GUIDE.md](DEPLOYMENT-GUIDE.md)**: Comprehensive guide with all Azure CLI commands, alternatives, and configuration
+- **[QUICK-COMMANDS.md](QUICK-COMMANDS.md)**: Quick reference with copy-paste ready commands
+- **[ARCHITECTURE.md](ARCHITECTURE.md)**: Architecture diagram and detailed resource descriptions
+- **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)**: Solutions for common deployment and connection issues
+- **[create-sql-vm.sh](create-sql-vm.sh)**: Automated deployment script (Bash)
+- **[create-sql-vm.ps1](create-sql-vm.ps1)**: Automated deployment script (PowerShell)
 
 ### Requirements
 
