@@ -15,6 +15,12 @@ This repository contains Azure CLI commands and scripts to deploy an Azure Virtu
 
 2. **Manual Deployment**: Follow the step-by-step commands in [DEPLOYMENT-GUIDE.md](DEPLOYMENT-GUIDE.md)
 
+3. **Verify Deployment**: After deployment, verify all resources
+   ```bash
+   chmod +x verify-deployment.sh
+   ./verify-deployment.sh
+   ```
+
 ### What Gets Created
 
 The deployment creates:
@@ -42,6 +48,7 @@ The deployment creates:
 - **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)**: Solutions for common deployment and connection issues
 - **[create-sql-vm.sh](create-sql-vm.sh)**: Automated deployment script (Bash)
 - **[create-sql-vm.ps1](create-sql-vm.ps1)**: Automated deployment script (PowerShell)
+- **[verify-deployment.sh](verify-deployment.sh)**: Script to verify deployment and test connectivity
 
 ### Requirements
 
