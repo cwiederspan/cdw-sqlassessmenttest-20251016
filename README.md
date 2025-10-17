@@ -138,6 +138,13 @@ az network bastion rdp \
   --name sql-bastion \
   --resource-group cdw-sqlassessment-20251017 \
   --target-resource-id /subscriptions/[your-subscription-id]/resourceGroups/cdw-sqlassessment-20251017/providers/Microsoft.Compute/virtualMachines/sql-vm
+
+
+az network bastion rdp \
+  --name sql-bastion \
+  --resource-group cdw-sqlassessment-20251017 \
+  --target-resource-id /subscriptions/30c417b6-b3c1-4b62-94c9-0d3a80a182e9/resourceGroups/cdw-sqlassessment-20251017/providers/Microsoft.Compute/virtualMachines/sql-vm
+
 ```
 
 ### Benefits of Bastion
