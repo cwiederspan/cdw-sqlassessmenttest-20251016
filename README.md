@@ -1,6 +1,6 @@
 # Azure SQL Server VM Deployment
 
-A repo for testing the Azure Assessment and Migration tool with scripts to deploy an Azure VM running SQL Server with RDP access.
+A repo for testing the Azure Assessment and Migration tool with scripts to deploy an Azure VM running SQL Server with secure RDP access via Azure Bastion.
 
 ## Quick Start
 
@@ -15,14 +15,16 @@ chmod +x create-sql-vm.sh
 The deployment script creates all necessary Azure resources:
 
 1. **Resource Group** - Container for all resources
-2. **Virtual Network** (10.0.0.0/16) with Subnet (10.0.1.0/24)
+2. **Virtual Network** (10.0.0.0/16) with two subnets:
+   - VM Subnet (10.0.1.0/24) - For the SQL Server VM
+   - AzureBastionSubnet (10.0.2.0/27) - Required for Bastion
 3. **Network Security Group** with rules for:
-   - RDP access (port 3389)
-   - SQL Server access (port 1433)
-4. **Static Public IP** - For consistent external access
-5. **Network Interface** - Connects VM to network
-6. **Azure VM** - SQL Server 2012 SP4 on Windows Server 2012 R2 (Standard_DS3_v2)
-7. **SQL VM Extension** - For SQL management features
+   - SQL Server access (port 1433) from VNet only
+4. **Azure Bastion** - Secure RDP access without public IP on VM
+5. **Bastion Public IP** - Only Bastion needs internet access
+6. **Network Interface** - Connects VM to network (no public IP)
+7. **Azure VM** - SQL Server 2019 on Windows Server 2019 (Standard_DS3_v2)
+8. **SQL VM Extension** - For SQL management features
 
 ## Manual Commands
 
@@ -30,14 +32,14 @@ If you prefer to run commands manually instead of using the script:
 
 ```bash
 # Set your variables
-RESOURCE_GROUP="sql-assessment-rg"
-LOCATION="eastus"
+RESOURCE_GROUP="cdw-sqlassessment-20251017"
+LOCATION="westus3"
 ADMIN_PASSWORD="YourSecureP@ssw0rd123!"  # Change this!
 
 # 1. Create Resource Group
 az group create --name "$RESOURCE_GROUP" --location "$LOCATION"
 
-# 2. Create Virtual Network and Subnet
+# 2. Create Virtual Network and VM Subnet
 az network vnet create \
   --resource-group "$RESOURCE_GROUP" \
   --name sql-vnet \
@@ -45,22 +47,19 @@ az network vnet create \
   --subnet-name sql-subnet \
   --subnet-prefix 10.0.1.0/24
 
-# 3. Create Network Security Group
+# 3. Create Bastion Subnet
+az network vnet subnet create \
+  --resource-group "$RESOURCE_GROUP" \
+  --vnet-name sql-vnet \
+  --name AzureBastionSubnet \
+  --address-prefix 10.0.2.0/27
+
+# 4. Create Network Security Group
 az network nsg create \
   --resource-group "$RESOURCE_GROUP" \
   --name sql-nsg
 
-# 4. Allow RDP (port 3389)
-az network nsg rule create \
-  --resource-group "$RESOURCE_GROUP" \
-  --nsg-name sql-nsg \
-  --name AllowRDP \
-  --priority 1000 \
-  --protocol Tcp \
-  --destination-port-ranges 3389 \
-  --access Allow
-
-# 5. Allow SQL Server (port 1433)
+# 5. Allow SQL Server (port 1433) from VNet only
 az network nsg rule create \
   --resource-group "$RESOURCE_GROUP" \
   --nsg-name sql-nsg \
@@ -68,79 +67,94 @@ az network nsg rule create \
   --priority 1001 \
   --protocol Tcp \
   --destination-port-ranges 1433 \
+  --source-address-prefixes "10.0.0.0/16" \
   --access Allow
 
-# 6. Create Public IP
+# 6. Create Public IP for Bastion
 az network public-ip create \
   --resource-group "$RESOURCE_GROUP" \
-  --name sql-public-ip \
+  --name bastion-public-ip \
   --allocation-method Static \
   --sku Standard
 
-# 7. Create Network Interface
+# 7. Create Bastion Host
+az network bastion create \
+  --resource-group "$RESOURCE_GROUP" \
+  --name sql-bastion \
+  --public-ip-address bastion-public-ip \
+  --vnet-name sql-vnet \
+  --location "$LOCATION"
+
+# 8. Create Network Interface (no public IP)
 az network nic create \
   --resource-group "$RESOURCE_GROUP" \
   --name sql-nic \
   --vnet-name sql-vnet \
   --subnet sql-subnet \
-  --network-security-group sql-nsg \
-  --public-ip-address sql-public-ip
+  --network-security-group sql-nsg
 
-# 8. Create SQL Server VM
+# 9. Create SQL Server VM
 az vm create \
   --resource-group "$RESOURCE_GROUP" \
   --name sql-vm \
   --nics sql-nic \
   --size Standard_DS3_v2 \
-  --image MicrosoftSQLServer:sql2012sp4-ws2012r2:standard:latest \
+  --image MicrosoftSQLServer:sql2019-ws2019:standard:latest \
   --admin-username azureuser \
   --admin-password "$ADMIN_PASSWORD"
 
-# 9. Configure SQL VM Extension
+# 10. Configure SQL VM Extension
 az sql vm create \
   --resource-group "$RESOURCE_GROUP" \
   --name sql-vm \
   --license-type PAYG \
   --sql-mgmt-type Full
 
-# 10. Get Public IP
-az network public-ip show \
+# 11. Get VM Private IP
+az vm show \
   --resource-group "$RESOURCE_GROUP" \
-  --name sql-public-ip \
-  --query ipAddress \
+  --name sql-vm \
+  --show-details \
+  --query privateIps \
   --output tsv
 ```
 
-## Connecting via RDP
+## Connecting via Azure Bastion
 
-After deployment, connect to your VM:
+After deployment, connect to your VM securely through Azure Bastion:
 
+### Option 1: Azure Portal
+1. Go to [Azure Portal](https://portal.azure.com)
+2. Navigate to your VM: `sql-vm`
+3. Click **Connect** → **Bastion**
+4. Enter credentials:
+   - Username: `azureuser`
+   - Password: The password you specified during deployment
+
+### Option 2: Azure CLI
 ```bash
-# Get the public IP
-PUBLIC_IP=$(az network public-ip show \
-  --resource-group sql-assessment-rg \
-  --name sql-public-ip \
-  --query ipAddress \
-  --output tsv)
-
-# Connect via RDP (Windows)
-mstsc /v:$PUBLIC_IP
-
-# Connect via RDP (Mac/Linux)
-# Use Microsoft Remote Desktop or remmina with the IP address
+# Connect via Azure CLI (requires subscription ID)
+az network bastion rdp \
+  --name sql-bastion \
+  --resource-group cdw-sqlassessment-20251017 \
+  --target-resource-id /subscriptions/[your-subscription-id]/resourceGroups/cdw-sqlassessment-20251017/providers/Microsoft.Compute/virtualMachines/sql-vm
 ```
 
-Login with:
-- Username: `azureuser`
-- Password: The password you specified during deployment
+### Benefits of Bastion
+- **No Public IP on VM**: Enhanced security
+- **No RDP Port Exposure**: Port 3389 not exposed to internet
+- **Centralized Access Control**: All access through Azure
+- **Built-in Audit Trail**: Connection logging and monitoring
 
 ## Cleanup
 
 To delete all resources:
 
 ```bash
-az group delete --name sql-assessment-rg --yes --no-wait
+az group delete --name cdw-sqlassessment-20251017 --yes
 ```
+
+**Note**: Bastion resources may take longer to delete than standard resources.
 
 ## Prerequisites
 
